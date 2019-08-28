@@ -1,5 +1,7 @@
 
-# Project Title Here
+# PDI NLP Server Integration
+
+A pdi plugin for the NLP Server. Should eliminate load times and plugins requiring massive dependencies (Stanford NLP).
 
 #### Pre-requisites for building the project:
 * Maven, version 3+
