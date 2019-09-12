@@ -54,12 +54,14 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
   private String inField;
   private String outField;
   private Long batchSize;
+  private String defaultQueue;
   private String brokerURI;
   private String backendURI;
   private String nerTask;
   private Long hardTimeLimit = 180000L;
   private Long timeLimit = 180000L;
   private Long delay = 0L;
+  private Long attempts = 0L;
   private static Class<?> PKG = PDINLPServerIntegration.class; // for i18n purposes, needed by Translator2!!   $NON-NLS-1$
 
   public PDINLPServerIntegrationMeta() {
@@ -138,6 +140,22 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     this.nerTask = nerTask;
   }
 
+  public String getDefaultQueue() {
+    return defaultQueue;
+  }
+
+  public void setDefaultQueue(String defaultQueue) {
+    this.defaultQueue = defaultQueue;
+  }
+
+  public Long getAttempts() {
+    return attempts;
+  }
+
+  public void setAttempts(Long attempts) {
+    this.attempts = attempts;
+  }
+
   public Object clone() {
     Object retval = super.clone();
     return retval;
@@ -161,6 +179,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     xml.append(XMLHandler.addTagValue("hardTimeLimit", this.hardTimeLimit));
     xml.append(XMLHandler.addTagValue("timeLimit", this.timeLimit));
     xml.append(XMLHandler.addTagValue("delay", this.delay));
+    xml.append(XMLHandler.addTagValue("defaultQueue", this.defaultQueue));
+    xml.append(XMLHandler.addTagValue("attempts", this.attempts));
     return xml.toString();
   }
   
@@ -176,6 +196,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
       setHardTimeLimit(Long.parseLong(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "hardTimeLimit"))));
       setTimeLimit(Long.parseLong(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "timeLimit"))));
       setDelay(Long.parseLong(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "delay"))));
+      setAttempts(Long.parseLong(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "attempts"))));
+      setDefaultQueue(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "defaultQueue")), ""));
     }catch(Exception e){
       throw new KettleXMLException("NLP Server Plugin unable to read step info from XML node", e);
     }
@@ -191,6 +213,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     this.hardTimeLimit = 180000L;
     this.timeLimit = 180000L;
     this.delay = 0L;
+    this.defaultQueue = "celery";
+    this.attempts = 1L;
   }
 
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
@@ -203,6 +227,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     this.hardTimeLimit = rep.getStepAttributeInteger(id_step, "hardTimeLimit");
     this.timeLimit = rep.getStepAttributeInteger(id_step, "timeLimit");
     this.delay = rep.getStepAttributeInteger(id_step, "delay");
+    this.defaultQueue = rep.getStepAttributeString(id_step, "defaultQueue");
+    this.attempts = rep.getJobEntryAttributeInteger(id_step, "attempts");
   }
   
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step )
@@ -216,6 +242,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     rep.saveStepAttribute(id_transformation, id_step, "hardTimeLimit", this.hardTimeLimit);
     rep.saveStepAttribute(id_transformation, id_step, "timeLimit", this.timeLimit);
     rep.saveStepAttribute(id_transformation, id_step, "delay", this.delay);
+    rep.saveStepAttribute(id_transformation, id_step, "defaultQueue", this.defaultQueue);
+    rep.saveStepAttribute(id_transformation, id_step, "attempts", this.attempts);
   }
   
   public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep, 

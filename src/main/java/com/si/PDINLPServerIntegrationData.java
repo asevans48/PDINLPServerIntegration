@@ -19,6 +19,7 @@
 package com.si;
 
 import com.si.celery.Celery;
+import com.si.celery.conf.Config;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
@@ -27,6 +28,7 @@ import org.pentaho.di.trans.step.StepDataInterface;
 public class PDINLPServerIntegrationData extends BaseStepData implements StepDataInterface {
   // Add any execution-specific data here
   private Celery celery;
+  private Config config;
   public RowMetaInterface outputRowMeta;
 
   /**
@@ -52,5 +54,21 @@ public class PDINLPServerIntegrationData extends BaseStepData implements StepDat
    */
   public Celery getCelery(){
     return this.celery;
+  }
+
+  /**
+   * Get the configuration for celery
+   * @return  the configuration
+   */
+  public Config getConfig() {
+    return config;
+  }
+
+  /**
+   * Set the configuration for celery
+   * @param config  The configuration for celery
+   */
+  public void setConfig(Config config) {
+    this.config = config;
   }
 }

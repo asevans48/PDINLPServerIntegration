@@ -96,9 +96,18 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
   private TextVar wNerTask;
   private FormData fdlNerTask, fdlNerTaskField;
 
+  private Label defaultQueue;
+  private TextVar wDefaultQueue;
+  private FormData fdlDefaultQueue, fdlDefaultQueueField;
+
   private Label batchSize;
   private TextVar wBatchSize;
   private FormData fdlBatchSize, fdlBatchSizeField;
+
+  private Label attempts;
+  private TextVar wAttempts;
+  private FormData fdlAttempts, fdlAttemptsField;
+
 
   private Button wCancel;
   private Button wOK;
@@ -359,12 +368,52 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlBatchSizeField.right = new FormAttachment(100, 0);
     wBatchSize.setLayoutData(fdlBatchSize);
 
+    //set the default queue
+    defaultQueue = new Label(shell, SWT.RIGHT);
+    defaultQueue.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.NERTask"));
+    props.setLook( defaultQueue );
+    fdlDefaultQueue = new FormData();
+    fdlDefaultQueue.left = new FormAttachment( 0, 0 );
+    fdlDefaultQueue.right = new FormAttachment( middle, -margin );
+    fdlDefaultQueue.top = new FormAttachment( wBatchSize, 15 );
+    defaultQueue.setLayoutData( fdlDefaultQueue);
+
+    wDefaultQueue = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wDefaultQueue.setText("");
+    wDefaultQueue.addModifyListener(lsMod);
+    props.setLook(wDefaultQueue);
+    fdlDefaultQueueField = new FormData();
+    fdlDefaultQueueField.left = new FormAttachment(middle, 0);
+    fdlDefaultQueueField.top = new FormAttachment(wBatchSize, 15);
+    fdlDefaultQueueField.right = new FormAttachment(100, 0);
+    wDefaultQueue.setLayoutData(fdlDefaultQueueField);
+
+    //number of attempts
+    attempts = new Label(shell, SWT.RIGHT);
+    attempts.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.NERTask"));
+    props.setLook( attempts );
+    fdlAttempts = new FormData();
+    fdlAttempts.left = new FormAttachment( 0, 0 );
+    fdlAttempts.right = new FormAttachment( middle, -margin );
+    fdlAttempts.top = new FormAttachment( wDefaultQueue, 15 );
+    attempts.setLayoutData( fdlAttempts);
+
+    wAttempts = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wAttempts.setText("");
+    wAttempts.addModifyListener(lsMod);
+    props.setLook(wDefaultQueue);
+    fdlAttemptsField = new FormData();
+    fdlAttemptsField.left = new FormAttachment(middle, 0);
+    fdlAttemptsField.top = new FormAttachment(wDefaultQueue, 15);
+    fdlAttemptsField.right = new FormAttachment(100, 0);
+    wAttempts.setLayoutData(fdlAttemptsField);
+
     // OK and cancel buttons
     wOK = new Button(shell, SWT.PUSH);
     wOK.setText(BaseMessages.getString(PKG, "System.Button.OK"));
     wCancel = new Button(shell, SWT.PUSH);
     wCancel.setText(BaseMessages.getString(PKG, "System.Button.Cancel"));
-    setButtonPositions(new Button[]{wOK, wCancel}, margin, batchSize);
+    setButtonPositions(new Button[]{wOK, wCancel}, margin, attempts);
 
     // Add listeners for cancel and OK
     lsCancel = new Listener() {
@@ -396,6 +445,8 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     wHardTimeLimit.addSelectionListener(lsDef);
     wTimeLimit.addSelectionListener(lsDef);
     wDelay.addSelectionListener(lsDef);
+    wDefaultQueue.addSelectionListener(lsDef);
+    wAttempts.addSelectionListener(lsDef);
 
     // Detect X or ALT-F4 or something that kills this window and cancel the dialog properly
     shell.addShellListener(new ShellAdapter() {
@@ -441,6 +492,8 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     wHardTimeLimit.setText(String.valueOf(meta.getHardTimeLimit()));
     wTimeLimit.setText(String.valueOf(meta.getTimeLimit()));
     wDelay.setText(String.valueOf(meta.getDelay()));
+    wDefaultQueue.setText(String.valueOf(meta.getDefaultQueue()));
+    wAttempts.setText(String.valueOf(meta.getAttempts()));
     wStepname.setFocus();
   }
 
@@ -470,8 +523,13 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     String hardTimeLimit = wHardTimeLimit.getText();
     String timeLimit = wTimeLimit.getText();
     String delay = wDelay.getText();
+    String defaultQueue = wDefaultQueue.getText();
+    String attempts = wAttempts.getText();
     if(batchSize == null){
       batchSize = "1";
+    }
+    if(attempts == null){
+      attempts = "1";
     }
     meta.setInField(inField);
     meta.setOutField(outField);
@@ -482,6 +540,8 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     meta.setHardTimeLimit(Long.parseLong(hardTimeLimit));
     meta.setTimeLimit(Long.parseLong(timeLimit));
     meta.setDelay(Long.parseLong(delay));
+    meta.setDefaultQueue(defaultQueue);
+    meta.setAttempts(Long.parseLong(attempts));
     dispose();
   }
 }

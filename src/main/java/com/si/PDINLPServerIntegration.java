@@ -18,11 +18,17 @@
  */
 package com.si;
 
+import com.si.celery.Celery;
+import com.si.celery.conf.Config;
+import com.si.celery.enums.ThreadPoolType;
 import com.si.celery.task.result.AsyncResult;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.row.RowDataUtil;
+import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
@@ -33,8 +39,12 @@ import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Describe your step plugin.
@@ -42,7 +52,7 @@ import java.util.concurrent.Future;
  */
 public class PDINLPServerIntegration extends BaseStep implements StepInterface {
 
-  private Object[][] batch;
+  private ArrayList<Object[]> batch;
   private int currBatch;
   private PDINLPServerIntegrationData data;
   private PDINLPServerIntegrationMeta meta;
@@ -147,38 +157,89 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
     public Object[][] packageResult(Object[][] inrows, AsyncResult result) throws ParseException, AssertionError {
       Object[][] nrows = new Object[inrows.length][];
       result.parsePayloadJson();
-      JSONArray resultBatch = (JSONArray) result.getResult();
-      if(resultBatch.size() == inrows.length){
-        for(int i = 0; i < resultBatch.size(); i++){
-          String resultStr = (String) resultBatch.get(i);
-          Object[] r = inrows[i].clone();
-          int idx = this.data.outputRowMeta.indexOfValue(this.meta.getOutField());
-          r[idx] = resultStr;
-          nrows[i] = r;
+      if(result.isSuccess()) {
+        JSONArray resultBatch = (JSONArray) result.getResult();
+        if (resultBatch.size() == inrows.length) {
+          for (int i = 0; i < resultBatch.size(); i++) {
+            String resultStr = (String) resultBatch.get(i);
+            Object[] r = inrows[i].clone();
+            int idx = this.data.outputRowMeta.indexOfValue(this.meta.getOutField());
+            r[idx] = resultStr;
+            nrows[i] = r;
+          }
+        } else {
+          throw new AssertionError("Result from Celery Must be Same Length as Sent Batch");
         }
-      }else{
-        throw new AssertionError("Result from Celery Must be Same Length as Sent Batch");
+      }else if(isBasic()){
+        logBasic("Failed to parser results in Celery for NLP Server");
       }
       return nrows;
     }
 
-  /**
-   * Obtain the results through celery
-   *
-   * @param batch The batch
-   * @return  Processed batch results
-   */
-    public Object[][] getResults(Object[][] batch){
-      if(this.data.getCelery() == null){
-        //create celery as needed
+    public void setCelery(){
+      //create celery as needed
+      Config cfg = Config
+              .builder()
+              .broker(this.meta.getBrokerURI())
+              .acceptContent("application/json")
+              .resultBackend(this.meta.getBackendURI())
+              .threadpoolExecutor(ThreadPoolType.THREAD_POOL_EXECUTOR)
+              .numThreads(1)
+              .build();
+      this.data.setConfig(cfg);
+      Celery celery = Celery
+              .builder()
+              .conf(cfg)
+              .brokerURI(this.meta.getBrokerURI())
+              .backendURI(this.meta.getBackendURI())
+              .app_name("pdi_nlp_server_app")
+              .build();
+      long hlimit = this.meta.getHardTimeLimit() / 1000;
+      long slimit = this.meta.getTimeLimit() / 1000;
+      long delay = this.meta.getDelay() / 1000;
+      celery.setHardTimeLimit(hlimit);
+      celery.setTimeLimit(slimit);
+      celery.setDelay(delay);
+      this.data.setCelery(celery);
     }
 
+  /**
+   * Get results from celery
+   *
+   * @param batch The batch for the task to execute
+   * @return  Batch results from celery
+   * @throws CloneNotSupportedException When cloning the config fails
+   * @throws InterruptedException When the future fails
+   * @throws ExecutionException When the future fails
+   * @throws TimeoutException When the future fails
+   * @throws ParseException Thrown when parsing the results fails
+   */
+    public Object[][] getResults(Object[][] batch) throws CloneNotSupportedException, InterruptedException, ExecutionException, TimeoutException, ParseException {
+      //create celery if necessary
+      if(this.data.getCelery() == null){
+        this.setCelery();
+      }
+
       //create args
+      Object[] args = this.createArgs(batch);
 
       //send task and get the future
+      String taskName = this.meta.getNerTask();
+      Future<AsyncResult> fut = this.sendTask(taskName, args, null);
 
       //process the return value
-      return null;
+      AsyncResult rval = null;
+      int attempt = 0;
+      do {
+        if (this.meta.getHardTimeLimit() > 0) {
+          rval = fut.get(this.meta.getHardTimeLimit(), TimeUnit.MILLISECONDS);
+        } else {
+          rval = fut.get();
+        }
+        attempt += 1;
+      }while((rval == null || rval.isSuccess() == false) && attempt < this.meta.getAttempts());
+      Object[][] packagedRows = this.packageResult(batch, rval);
+      return packagedRows;
     }
 
   /**
@@ -193,6 +254,17 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
     }
 
   /**
+   * Push rows to output
+   * @param rows  The rows
+   * @throws KettleStepException  thrown by kettle
+   */
+  public void pushRows(Object[][] rows) throws KettleStepException {
+    for(Object[] row: rows) {
+      putRow(getInputRowMeta(), row);
+    }
+   }
+
+  /**
    * Process a row
    * @param smi step meta interface for the row
    * @param sdi step data interface for the row
@@ -202,9 +274,18 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
     public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
       Object[] r = getRow(); // get row, set busy!
       if ( r == null ) {
-        // no more input to be expected...
-        setOutputDone();
-        return false;
+        // no more input to be expected
+        if(this.data.getCelery() != null) {
+          try{
+            this.data.getCelery().close();
+          }finally{
+            setOutputDone();
+            return false;
+          }
+        }else {
+          setOutputDone();
+          return false;
+        }
       }
 
       if(first){
@@ -212,19 +293,39 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
         this.meta = (PDINLPServerIntegrationMeta) meta;
         this.setupProcessor();
         int bsize = meta.getBatchSize().intValue();
-        this.batch = new Object[bsize][];
+        this.batch = new ArrayList<Object[]>();
       }
 
-      Object[] nrow = r.clone();
-      this.batch[this.currBatch] = nrow;
-      this.currBatch += 1;
-      if(this.currBatch == this.meta.getBatchSize().intValue()) {
-        Object[][] results = this.getResults(this.batch);
-        for(int i = 0; i < results.length; i++) {
-          Object[] outRow = results[i].clone();
-          putRow(getInputRowMeta(), outRow);
+      Object[] nrow = null;
+      if(r != null) {
+        nrow = r.clone();
+        nrow = RowDataUtil.resizeArray(nrow, this.data.outputRowMeta.size());
+        this.batch.add(nrow);
+        this.currBatch += 1;
+      }
+
+      if((this.currBatch == this.meta.getBatchSize().intValue() || nrow == null) && this.batch.size() > 0){
+        Object[][] obatch = new Object[this.batch.size()][];
+        for(int i = 0; i < this.batch.size(); i++){
+          Object[] or = this.batch.get(i);
+          obatch[i] = or;
         }
-        this.batch = new Object[this.meta.getBatchSize().intValue()][];
+        Object[][] results = obatch;
+        try {
+          results = this.getResults(obatch);
+        } catch (CloneNotSupportedException e) {
+          e.printStackTrace();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        } catch (ExecutionException e) {
+          e.printStackTrace();
+        } catch (TimeoutException e) {
+          e.printStackTrace();
+        } catch (ParseException e) {
+          e.printStackTrace();
+        }
+        this.pushRows(results);
+        this.batch = new ArrayList<Object[]>();
       }
 
       if ( checkFeedback( getLinesRead() ) ) {
