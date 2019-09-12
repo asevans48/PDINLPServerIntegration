@@ -29,7 +29,9 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.*;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.plugins.PluginInterface;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.plugins.StepPluginType;
@@ -37,6 +39,7 @@ import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
+import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.ui.core.ConstUI;
 import org.pentaho.di.ui.core.FormDataBuilder;
 import org.pentaho.di.ui.core.gui.GUIResource;
@@ -57,27 +60,47 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
 
   private PDINLPServerIntegrationMeta meta;
 
-  private ScrolledComposite scrolledComposite;
-  private Composite contentComposite;
-  private Label wStepNameLabel;
-  private Text wStepNameField;
-  private Label wSampleLabel1;
-  private TextVar wSampleTextField1;
-  private Label wSampleLabel2;
-  private TextVar wSampleTextField2;
-  private Label wSampleLabel3;
-  private TextVar wSampleTextField3;
-  private Button wInlineButton;
-  private Label wSampleLabel4;
-  private CCombo wSampleComboBox;
-  private Button wRadioButton1;
-  private Button wRadioButton2;
-  private Button wCheckbox1;
-  private Button wCheckbox2;
-  private Table wTable;
-  private Button wTableButton;
+  private Label wlStepname;
+  private Text wStepname;
+  private FormData fdStepname, fdlStepname;
+
+  private Label lfname;
+  private CCombo wInFieldCombo;
+  private FormData fdlFname, fdStep;
+
+  private Label wOutFieldName;
+  private TextVar wOutField;
+  private FormData fdlOutFieldName, fdlOutField;
+
+  private Label brokerURI;
+  private TextVar wBrokerURI;
+  private FormData fdlBrokerURI, fdlBrokerURIField;
+
+  private Label backendURI;
+  private TextVar wBackendURI;
+  private FormData fdlBackendURI, fdlBackendURIField;
+
+  private Label hardTimeLimit;
+  private TextVar wHardTimeLimit;
+  private FormData fdlHardTimeLimit, fdlHardTimeLimitField;
+
+  private Label timeLimit;
+  private TextVar wTimeLimit;
+  private FormData fdlTimeLimit, fdlTimeLimitField;
+
+  private Label delay;
+  private TextVar wDelay;
+  private FormData fdlDelay, fdlDelayField;
+
+  private Label nerTask;
+  private TextVar wNerTask;
+  private FormData fdlNerTask, fdlNerTaskField;
+
+  private Label batchSize;
+  private TextVar wBatchSize;
+  private FormData fdlBatchSize, fdlBatchSizeField;
+
   private Button wCancel;
-  private Button wAction;
   private Button wOK;
   private ModifyListener lsMod;
   private Listener lsCancel;
@@ -91,358 +114,334 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
   }
 
   public String open() {
-    //Set up window
+    // store some convenient SWT variables
     Shell parent = getParent();
     Display display = parent.getDisplay();
 
-    shell = new Shell( parent, SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX );
-    shell.setMinimumSize( 450, 335 );
-    props.setLook( shell);
-    setShellImage( shell, meta );
+    // SWT code for preparing the dialog
+    shell = new Shell(parent, SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
+    props.setLook(shell);
+    setShellImage(shell, meta);
 
-    lsMod = new ModifyListener() {
-      public void modifyText( ModifyEvent e ) {
+    // Save the value of the changed flag on the meta object. If the user cancels
+    // the dialog, it will be restored to this saved value.
+    // The "changed" variable is inherited from BaseStepDialog
+    changed = meta.hasChanged();
+
+    // The ModifyListener used on all controls. It will update the meta object to
+    // indicate that changes are being made.
+    ModifyListener lsMod = new ModifyListener() {
+      public void modifyText(ModifyEvent e) {
         meta.setChanged();
       }
     };
-    changed = meta.hasChanged();
 
-    //15 pixel margins
+    // ------------------------------------------------------- //
+    // SWT code for building the actual settings dialog        //
+    // ------------------------------------------------------- //
     FormLayout formLayout = new FormLayout();
-    formLayout.marginLeft = MARGIN_SIZE;
-    formLayout.marginHeight = MARGIN_SIZE;
-    shell.setLayout( formLayout );
-    shell.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Shell.Title" ) );
+    formLayout.marginWidth = Const.FORM_MARGIN;
+    formLayout.marginHeight = Const.FORM_MARGIN;
+    shell.setLayout(formLayout);
+    shell.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Shell.Title"));
+    int middle = props.getMiddlePct();
+    int margin = Const.MARGIN;
 
-    //Build a scrolling composite and a composite for holding all content
-    scrolledComposite = new ScrolledComposite(shell, SWT.V_SCROLL);
-    contentComposite = new Composite(scrolledComposite, SWT.NONE);
-    FormLayout contentLayout = new FormLayout();
-    contentLayout.marginRight = MARGIN_SIZE;
-    contentComposite.setLayout( contentLayout );
-    FormData compositeLayoutData = new FormDataBuilder().fullSize()
-                                                        .result();
-    contentComposite.setLayoutData( compositeLayoutData );
-    props.setLook( contentComposite );
+    // Stepname line
+    wlStepname = new Label(shell, SWT.RIGHT);
+    wlStepname.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Stepname.Label"));
+    props.setLook(wlStepname);
+    fdlStepname = new FormData();
+    fdlStepname.left = new FormAttachment(0, 0);
+    fdlStepname.right = new FormAttachment(middle, -margin);
+    fdlStepname.top = new FormAttachment(0, margin);
+    wlStepname.setLayoutData(fdlStepname);
 
-    //Step name label and text field
-    wStepNameLabel = new Label( contentComposite, SWT.RIGHT );
-    wStepNameLabel.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Stepname.Label" ) );
-    props.setLook(wStepNameLabel);
-    FormData fdStepNameLabel = new FormDataBuilder().left()
-                                                    .top()
-                                                    .result();
-    wStepNameLabel.setLayoutData( fdStepNameLabel );
+    wStepname = new Text(shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wStepname.setText(stepname);
+    props.setLook(wStepname);
+    wStepname.addModifyListener(lsMod);
+    fdStepname = new FormData();
+    fdStepname.left = new FormAttachment(middle, 0);
+    fdStepname.top = new FormAttachment(0, margin);
+    fdStepname.right = new FormAttachment(100, 0);
+    wStepname.setLayoutData(fdStepname);
 
-    wStepNameField = new Text( contentComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    wStepNameField.setText( stepname );
-    props.setLook(wStepNameField);
-    wStepNameField.addModifyListener( lsMod );
-    FormData fdStepName = new FormDataBuilder().left()
-                                               .top(wStepNameLabel, LABEL_SPACING )
-                                               .width( MEDIUM_FIELD )
-                                               .result();
-    wStepNameField.setLayoutData( fdStepName );
+    //output field name
+    lfname = new Label( shell, SWT.RIGHT );
+    lfname.setText( BaseMessages.getString( PKG, "NominatimPDIPluginDialog.Fields.InField" ) );
+    props.setLook( lfname );
+    fdlFname = new FormData();
+    fdlFname.left = new FormAttachment( 0, 0 );
+    fdlFname.right = new FormAttachment( middle, -margin );
+    fdlFname.top = new FormAttachment( wStepname, 15 );
+    lfname.setLayoutData( fdlFname );
 
-    //Job icon, centered vertically between the top of the label and the bottom of the field.
-    Label wicon = new Label( contentComposite, SWT.CENTER );
-    wicon.setImage( getImage() );
-    FormData fdIcon = new FormDataBuilder().right()
-                                           .top( 0, 4 )
-                                           .bottom( new FormAttachment(wStepNameField, 0, SWT.BOTTOM ) )
-                                           .result();
-    wicon.setLayoutData( fdIcon );
-    props.setLook( wicon );
-
-    //Spacer between entry info and content
-    Label topSpacer = new Label( contentComposite, SWT.HORIZONTAL | SWT.SEPARATOR );
-    FormData fdSpacer = new FormDataBuilder().fullWidth()
-                                             .top( wStepNameField, MARGIN_SIZE )
-                                             .result();
-    topSpacer.setLayoutData( fdSpacer );
-
-    //Groups for first type of content
-    Group group = new Group( contentComposite, SWT.SHADOW_ETCHED_IN );
-    group.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.GroupText" ) );
-    FormLayout groupLayout = new FormLayout();
-    groupLayout.marginWidth = MARGIN_SIZE;
-    groupLayout.marginHeight = MARGIN_SIZE;
-    group.setLayout( groupLayout );
-    FormData groupLayoutData = new FormDataBuilder().fullWidth()
-                                                    .top( topSpacer, MARGIN_SIZE )
-                                                    .result();
-    group.setLayoutData( groupLayoutData );
-    props.setLook( group );
-
-    //350 px (large) label/field
-    wSampleLabel1 = new Label( group, SWT.LEFT );
-    props.setLook(wSampleLabel1);
-    wSampleLabel1.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.TextField350" ) );
-    FormData fdlTransformation = new FormDataBuilder().left()
-                                                      .top()
-                                                      .result();
-    wSampleLabel1.setLayoutData( fdlTransformation );
-
-    wSampleTextField1 = new TextVar( transMeta, group, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook(wSampleTextField1);
-    FormData fdTransformation = new FormDataBuilder().left()
-                                                     .top( wSampleLabel1, LABEL_SPACING )
-                                                     .width( LARGE_FIELD )
-                                                     .result();
-    wSampleTextField1.setLayoutData( fdTransformation );
-
-    //250 px (medium) label/field
-    wSampleLabel2 = new Label( group, SWT.LEFT );
-    props.setLook(wSampleLabel2);
-    wSampleLabel2.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.TextField250" ) );
-    FormData fdlTransformation2 = new FormDataBuilder().left()
-                                                       .top( wSampleTextField1, ELEMENT_SPACING )
-                                                       .result();
-    wSampleLabel2.setLayoutData( fdlTransformation2 );
-
-    wSampleTextField2 = new TextVar( transMeta, group, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook(wSampleTextField2);
-    FormData fdTransformation2 = new FormDataBuilder().left()
-                                                      .top( wSampleLabel2, LABEL_SPACING )
-                                                      .width( MEDIUM_FIELD )
-                                                      .result();
-    wSampleTextField2.setLayoutData( fdTransformation2 );
-
-    //75 px (small) label/field with inline button. 50px fields may be appropriate in some scenarios
-    wSampleLabel3 = new Label( group, SWT.LEFT );
-    props.setLook(wSampleLabel3);
-    wSampleLabel3.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.TextField75" ) );
-    FormData fdlTransformation3 = new FormDataBuilder().left()
-                                                       .top( wSampleTextField2, ELEMENT_SPACING )
-                                                       .result();
-    wSampleLabel3.setLayoutData( fdlTransformation3 );
-
-    wSampleTextField3 = new TextVar( transMeta, group, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook(wSampleTextField3);
-    FormData fdTransformation3 = new FormDataBuilder().left()
-                                                      .top( wSampleLabel3, LABEL_SPACING )
-                                                      .width( SMALL_FIELD )
-                                                      .result();
-    wSampleTextField3.setLayoutData( fdTransformation3 );
-
-    wInlineButton = new Button( group, SWT.PUSH );
-    wInlineButton.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Button" ) );
-    FormData fdInlineButton = new FormDataBuilder().left( wSampleTextField3, LABEL_SPACING )
-                                                   .top( new FormAttachment( wSampleTextField3, 0, SWT.CENTER ) )
-                                                   .result();
-    wInlineButton.setLayoutData( fdInlineButton );
-
-    //350px label/combo box
-    wSampleLabel4 = new Label( group, SWT.LEFT );
-    props.setLook(wSampleLabel4);
-    wSampleLabel4.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Dropdown" ) );
-    FormData fdlTransformation4 = new FormDataBuilder().left()
-                                                       .top( wSampleTextField3, ELEMENT_SPACING )
-                                                       .result();
-    wSampleLabel4.setLayoutData( fdlTransformation4 );
-
-    int comboBoxArrowWidth = 18; //The arrow on the right of the combo box does not contribute to its width.
-    //We reduce with width of the box to remedy this.
-
-    wSampleComboBox = new CCombo( group, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook(wSampleComboBox);
-    FormData fdTransformation4 = new FormDataBuilder().left()
-                                                      .top( wSampleLabel4, LABEL_SPACING )
-                                                      .width( LARGE_FIELD - comboBoxArrowWidth )
-                                                      .result();
-    wSampleComboBox.setLayoutData( fdTransformation4 );
-    wSampleComboBox.add( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.ComboBoxOption1" ) );
-    wSampleComboBox.add( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.ComboBoxOption2" ) );
-
-    //Tabs
-    CTabFolder wTabFolder = new CTabFolder( contentComposite, SWT.BORDER );
-    props.setLook( wTabFolder, Props.WIDGET_STYLE_TAB );
-
-    CTabItem wTab1 = new CTabItem( wTabFolder, SWT.NONE );
-    wTab1.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Tab1" ) );
-    Composite wTab1Contents = new Composite( wTabFolder, SWT.SHADOW_NONE );
-    props.setLook( wTab1Contents );
-    FormLayout tab1Layout = new FormLayout();
-    tab1Layout.marginWidth = MARGIN_SIZE;
-    tab1Layout.marginHeight = MARGIN_SIZE;
-    wTab1Contents.setLayout( tab1Layout );
-    FormData fdTab1 = new FormDataBuilder().fullSize()
-                                           .result();
-    wTab1Contents.setLayoutData( fdTab1 );
-    wTab1.setControl( wTab1Contents );
-
-    CTabItem wTab2 = new CTabItem( wTabFolder, SWT.NONE );
-    wTab2.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Tab2" ) );
-    Composite wTab2Contents = new Composite( wTabFolder, SWT.NONE );
-    props.setLook( wTab2Contents );
-    FormLayout tab2Layout = new FormLayout();
-    tab2Layout.marginWidth = MARGIN_SIZE;
-    tab2Layout.marginHeight = MARGIN_SIZE;
-    wTab2Contents.setLayout( tab2Layout );
-    FormData fdTab2 = new FormDataBuilder().fullSize()
-                                           .result();
-    wTab2Contents.setLayoutData( fdTab2 );
-    wTab2.setControl( wTab2Contents );
-
-    wTabFolder.setSelection( 0 );
-
-    //Radio buttons and checkboxes for the first tab
-    wRadioButton1 = new Button(wTab1Contents, SWT.RADIO);
-    wRadioButton1.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.RadioButton1"));
-    wRadioButton1.setBackground( display.getSystemColor( SWT.COLOR_TRANSPARENT ) );
-    FormData fdRadioButton1 = new FormDataBuilder().left()
-                                                   .top()
-                                                   .result();
-    wRadioButton1.setLayoutData(fdRadioButton1);
-
-    wRadioButton2 = new Button(wTab1Contents, SWT.RADIO);
-    wRadioButton2.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.RadioButton2"));
-    wRadioButton2.setBackground( display.getSystemColor( SWT.COLOR_TRANSPARENT ) );
-    FormData fdRadioButton2 = new FormDataBuilder().left()
-                                                   .top( wRadioButton1, ELEMENT_SPACING )
-                                                   .result();
-    wRadioButton2.setLayoutData(fdRadioButton2);
-
-    wCheckbox1 = new Button(wTab1Contents, SWT.CHECK);
-    wCheckbox1.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Checkbox1" ) );
-    wCheckbox1.setBackground( display.getSystemColor( SWT.COLOR_TRANSPARENT ) );
-    FormData fdCheck1 = new FormDataBuilder().left( wRadioButton1, MARGIN_SIZE )
-                                             .top()
-                                             .result();
-    wCheckbox1.setLayoutData(fdCheck1);
-
-    wCheckbox2 = new Button(wTab1Contents, SWT.CHECK);
-    wCheckbox2.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Checkbox2" ) );
-    wCheckbox2.setBackground( display.getSystemColor( SWT.COLOR_TRANSPARENT ) );
-    FormData fdCheck2 = new FormDataBuilder().left( wRadioButton1, MARGIN_SIZE )
-                                             .top( wCheckbox1, ELEMENT_SPACING )
-                                             .result();
-    wCheckbox2.setLayoutData(fdCheck2);
-
-    //Table and button for the second tab
-    wTableButton = new Button( wTab2Contents, SWT.PUSH );
-    wTableButton.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.Button" ) );
-    FormData fdTableButton = new FormDataBuilder().right()
-                                                  .bottom()
-                                                  .result();
-    wTableButton.setLayoutData( fdTableButton );
-
-    wTable = new Table(wTab2Contents, SWT.MULTI | SWT.BORDER | SWT.NO_SCROLL);
-    wTable.setHeaderVisible(true);
-    wTable.setLinesVisible(true);
-    FormData fdTable = new FormDataBuilder().fullWidth()
-                                            .top()
-                                            .bottom( wTableButton, -ELEMENT_SPACING )
-                                            .result();
-    wTable.setLayoutData( fdTable );
-    wTable.setItemCount(5);
-
-    int numColumns = 3;
-    for(int i = 0; i < numColumns; i++) {
-      TableColumn col = new TableColumn( wTable, SWT.NONE );
-      col.setResizable(false);
-      col.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.TableHeader" ) + " " + ( i + 1 ) );
-    }
-    wTable.addControlListener(new ControlAdapter() {
-      @Override
-      public void controlResized( ControlEvent controlEvent ) {
-        int tableWidth = wTable.getSize().x;
-        int numColumns = wTable.getColumnCount();
-        for( TableColumn col : wTable.getColumns() ) {
-          col.setWidth( tableWidth / numColumns );
+    wInFieldCombo = new CCombo( shell, SWT.BORDER );
+    props.setLook( wInFieldCombo );
+    StepMeta stepinfo = transMeta.findStep( stepname );
+    if ( stepinfo != null ) {
+      try {
+        String[] fields = transMeta.getStepFields(stepname).getFieldNames();
+        for (int i = 0; i < fields.length; i++) {
+          wInFieldCombo.add(fields[i]);
         }
+      }catch(KettleException e){
+        if ( log.isBasic())
+          logBasic("Failed to Get Step Fields");
       }
-    });
+    }
 
-    //Cancel, action and OK buttons for the bottom of the window.
-    wCancel = new Button( shell, SWT.PUSH );
-    wCancel.setText( BaseMessages.getString( PKG, "System.Button.Cancel" ) );
-    FormData fdCancel = new FormDataBuilder().right(100, -MARGIN_SIZE)
-                                             .bottom()
-                                             .result();
-    wCancel.setLayoutData( fdCancel );
+    wInFieldCombo.addModifyListener( lsMod );
+    fdStep = new FormData();
+    fdStep.left = new FormAttachment( middle, 0 );
+    fdStep.top = new FormAttachment( wStepname, 15 );
+    fdStep.right = new FormAttachment( 100, 0 );
+    wInFieldCombo.setLayoutData( fdStep );
 
-    wAction = new Button( shell, SWT.PUSH );
-    wAction.setText( BaseMessages.getString( PKG, "PDINLPServerIntegrationDialog.ActionButton" ) );
-    int actionButtonWidth = wAction.computeSize( SWT.DEFAULT, SWT.DEFAULT ).x;
-    FormData fdAction = new FormDataBuilder().right( 50, actionButtonWidth / 2 )
-                                             .bottom()
-                                             .result();
-    wAction.setLayoutData( fdAction );
+    //outfield
+    wOutFieldName = new Label(shell, SWT.RIGHT);
+    wOutFieldName.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.OutField"));
+    props.setLook(wOutFieldName);
+    fdlOutFieldName = new FormData();
+    fdlOutFieldName.left = new FormAttachment(0, 0);
+    fdlOutFieldName.top = new FormAttachment(lfname, 15);
+    fdlOutFieldName.right = new FormAttachment(middle, -margin);
+    wOutFieldName.setLayoutData(fdlOutFieldName);
+    wOutField = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wOutField.setText("");
+    wOutField.addModifyListener(lsMod);
+    props.setLook(wOutField);
+    fdlOutField = new FormData();
+    fdlOutField.left = new FormAttachment(middle, 0);
+    fdlOutField.top = new FormAttachment(lfname, 15);
+    fdlOutField.right = new FormAttachment(100, 0);
+    wOutField.setLayoutData(fdlOutField);
 
-    wOK = new Button( shell, SWT.PUSH );
-    wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
-    FormData fdOk = new FormDataBuilder().right( wCancel, -LABEL_SPACING )
-                                         .bottom()
-                                         .result();
-    wOK.setLayoutData( fdOk );
+    //set the broker  URI (optional if environment var set)
+    brokerURI = new Label(shell, SWT.RIGHT);
+    brokerURI.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.Broker"));
+    props.setLook( brokerURI );
+    fdlBrokerURI = new FormData();
+    fdlBrokerURI.left = new FormAttachment( 0, 0 );
+    fdlBrokerURI.right = new FormAttachment( middle, -margin );
+    fdlBrokerURI.top = new FormAttachment( wOutField, 15 );
+    brokerURI.setLayoutData( fdlBrokerURI);
 
-    //Space between bottom buttons and the table, final layout for table
-    Label bottomSpacer = new Label( shell, SWT.HORIZONTAL | SWT.SEPARATOR );
-    FormData fdhSpacer = new FormDataBuilder().left()
-                                              .right(100, -MARGIN_SIZE)
-                                              .bottom( wCancel, -MARGIN_SIZE )
-                                              .result();
-    bottomSpacer.setLayoutData( fdhSpacer );
+    wBrokerURI = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wBrokerURI.setText("");
+    wBrokerURI.addModifyListener(lsMod);
+    props.setLook(wBrokerURI);
+    fdlBrokerURIField = new FormData();
+    fdlBrokerURIField.left = new FormAttachment(middle, 0);
+    fdlBrokerURIField.top = new FormAttachment(wOutField, 15);
+    fdlBrokerURIField.right = new FormAttachment(100, 0);
+    wBrokerURI.setLayoutData(fdlBrokerURIField);
 
-    FormData fdTabFolder = new FormDataBuilder().fullWidth()
-                                                .top( group, MARGIN_SIZE )
-                                                .bottom()
-                                                .result();
-    wTabFolder.setLayoutData( fdTabFolder );
+    //set the backend URI (optional if environment var set)
+    backendURI = new Label(shell, SWT.RIGHT);
+    backendURI.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.Backend"));
+    props.setLook( backendURI );
+    fdlBackendURI = new FormData();
+    fdlBackendURI.left = new FormAttachment( 0, 0 );
+    fdlBackendURI.right = new FormAttachment( middle, -margin );
+    fdlBackendURI.top = new FormAttachment( wBrokerURI, 15 );
+    backendURI.setLayoutData( fdlBackendURI);
 
-    //Add everything to the scrolling composite
-    scrolledComposite.setContent(contentComposite);
-    scrolledComposite.setExpandVertical(true);
-    scrolledComposite.setExpandHorizontal(true);
-    scrolledComposite.setMinSize( contentComposite.computeSize( SWT.DEFAULT, SWT.DEFAULT ) );
+    wBackendURI = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wBackendURI.setText("");
+    wBackendURI.addModifyListener(lsMod);
+    props.setLook(wBackendURI);
+    fdlBackendURIField = new FormData();
+    fdlBackendURIField.left = new FormAttachment(middle, 0);
+    fdlBackendURIField.top = new FormAttachment(wBrokerURI, 15);
+    fdlBackendURIField.right = new FormAttachment(100, 0);
+    wBackendURI.setLayoutData(fdlBackendURIField);
 
-    scrolledComposite.setLayout(new FormLayout());
-    FormData fdScrolledComposite = new FormDataBuilder().fullWidth()
-                                                        .top()
-                                                        .bottom( bottomSpacer, -MARGIN_SIZE )
-                                                        .result();
-    scrolledComposite.setLayoutData(fdScrolledComposite);
-    props.setLook(scrolledComposite);
+    //set the task name
+    nerTask = new Label(shell, SWT.RIGHT);
+    nerTask.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.NERTask"));
+    props.setLook( nerTask );
+    fdlNerTask = new FormData();
+    fdlNerTask.left = new FormAttachment( 0, 0 );
+    fdlNerTask.right = new FormAttachment( middle, -margin );
+    fdlNerTask.top = new FormAttachment( wBackendURI, 15 );
+    nerTask.setLayoutData( fdlNerTask);
 
-    //Listeners
+    wNerTask = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wNerTask.setText("");
+    wNerTask.addModifyListener(lsMod);
+    props.setLook(wNerTask);
+    fdlNerTaskField = new FormData();
+    fdlNerTaskField.left = new FormAttachment(middle, 0);
+    fdlNerTaskField.top = new FormAttachment(wBackendURI, 15);
+    fdlNerTaskField.right = new FormAttachment(100, 0);
+    wNerTask.setLayoutData(fdlNerTaskField);
+
+    //hard timeLimit (default 180000)
+    hardTimeLimit = new Label(shell, SWT.RIGHT);
+    hardTimeLimit.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.HardTimeLimit"));
+    props.setLook( hardTimeLimit );
+    fdlHardTimeLimit = new FormData();
+    fdlHardTimeLimit.left = new FormAttachment( 0, 0 );
+    fdlHardTimeLimit.right = new FormAttachment( middle, -margin );
+    fdlHardTimeLimit.top = new FormAttachment( wNerTask, 15 );
+    hardTimeLimit.setLayoutData( fdlHardTimeLimit);
+
+    wHardTimeLimit = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wHardTimeLimit.setText("");
+    wHardTimeLimit.addModifyListener(lsMod);
+    props.setLook(wHardTimeLimit);
+    fdlHardTimeLimitField = new FormData();
+    fdlHardTimeLimitField.left = new FormAttachment(middle, 0);
+    fdlHardTimeLimitField.top = new FormAttachment(wNerTask, 15);
+    fdlHardTimeLimitField.right = new FormAttachment(100, 0);
+    wHardTimeLimit.setLayoutData(fdlHardTimeLimitField);
+
+    //time limit (default 180000)
+    timeLimit = new Label(shell, SWT.RIGHT);
+    timeLimit.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.TimeLimit"));
+    props.setLook( timeLimit );
+    fdlTimeLimit = new FormData();
+    fdlTimeLimit.left = new FormAttachment( 0, 0 );
+    fdlTimeLimit.right = new FormAttachment( middle, -margin );
+    fdlTimeLimit.top = new FormAttachment( hardTimeLimit, 15 );
+    timeLimit.setLayoutData( fdlTimeLimit);
+
+    wTimeLimit = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wTimeLimit.setText("");
+    wTimeLimit.addModifyListener(lsMod);
+    props.setLook(wTimeLimit);
+    fdlTimeLimitField = new FormData();
+    fdlTimeLimitField.left = new FormAttachment(middle, 0);
+    fdlTimeLimitField.top = new FormAttachment(hardTimeLimit, 15);
+    fdlTimeLimitField.right = new FormAttachment(100, 0);
+    wBatchSize.setLayoutData(fdlBatchSize);
+
+
+    //delay (default 180000)
+    delay = new Label(shell, SWT.RIGHT);
+    delay.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.Delay"));
+    props.setLook( delay );
+    fdlDelay = new FormData();
+    fdlDelay.left = new FormAttachment( 0, 0 );
+    fdlDelay.right = new FormAttachment( middle, -margin );
+    fdlDelay.top = new FormAttachment( timeLimit, 15 );
+    delay.setLayoutData( fdlBatchSize);
+
+    wDelay = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wDelay.setText("");
+    wDelay.addModifyListener(lsMod);
+    props.setLook(wDelay);
+    fdlDelayField = new FormData();
+    fdlDelayField.left = new FormAttachment(middle, 0);
+    fdlDelayField.top = new FormAttachment(timeLimit, 15);
+    fdlDelayField.right = new FormAttachment(100, 0);
+    wDelay.setLayoutData(fdlDelayField);
+
+    //set the batch size (optional will default to 1)
+    batchSize = new Label(shell, SWT.RIGHT);
+    batchSize.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.BatchSize"));
+    props.setLook( batchSize );
+    fdlBatchSize = new FormData();
+    fdlBatchSize.left = new FormAttachment( 0, 0 );
+    fdlBatchSize.right = new FormAttachment( middle, -margin );
+    fdlBatchSize.top = new FormAttachment( wDelay, 15 );
+    batchSize.setLayoutData( fdlBatchSize);
+
+    wBatchSize = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wBatchSize.setText("");
+    wBatchSize.addModifyListener(lsMod);
+    props.setLook(wBatchSize);
+    fdlBatchSizeField = new FormData();
+    fdlBatchSizeField.left = new FormAttachment(middle, 0);
+    fdlBatchSizeField.top = new FormAttachment(wDelay, 15);
+    fdlBatchSizeField.right = new FormAttachment(100, 0);
+    wBatchSize.setLayoutData(fdlBatchSize);
+
+    // OK and cancel buttons
+    wOK = new Button(shell, SWT.PUSH);
+    wOK.setText(BaseMessages.getString(PKG, "System.Button.OK"));
+    wCancel = new Button(shell, SWT.PUSH);
+    wCancel.setText(BaseMessages.getString(PKG, "System.Button.Cancel"));
+    setButtonPositions(new Button[]{wOK, wCancel}, margin, batchSize);
+
+    // Add listeners for cancel and OK
     lsCancel = new Listener() {
-      public void handleEvent( Event e ) {
+      public void handleEvent(Event e) {
         cancel();
       }
     };
     lsOK = new Listener() {
-      public void handleEvent( Event e ) {
+      public void handleEvent(Event e) {
         ok();
       }
     };
+    wCancel.addListener(SWT.Selection, lsCancel);
+    wOK.addListener(SWT.Selection, lsOK);
 
-    wOK.addListener( SWT.Selection, lsOK );
-    wCancel.addListener( SWT.Selection, lsCancel );
-
+    // default listener (for hitting "enter")
     lsDef = new SelectionAdapter() {
-      public void widgetDefaultSelected( SelectionEvent e ) {
+      public void widgetDefaultSelected(SelectionEvent e) {
         ok();
       }
     };
-    wStepNameField.addSelectionListener( lsDef );
+    wStepname.addSelectionListener(lsDef);
+    wInFieldCombo.addSelectionListener(lsDef);
+    wOutField.addSelectionListener(lsDef);
+    wBrokerURI.addSelectionListener(lsDef);
+    wBackendURI.addSelectionListener(lsDef);
+    wBatchSize.addSelectionListener(lsDef);
+    wNerTask.addSelectionListener(lsDef);
+    wHardTimeLimit.addSelectionListener(lsDef);
+    wTimeLimit.addSelectionListener(lsDef);
+    wDelay.addSelectionListener(lsDef);
 
-    shell.addShellListener( new ShellAdapter() {
-      public void shellClosed( ShellEvent e ) {
+    // Detect X or ALT-F4 or something that kills this window and cancel the dialog properly
+    shell.addShellListener(new ShellAdapter() {
+      public void shellClosed(ShellEvent e) {
         cancel();
       }
-    } );
+    });
 
-    //Show shell
+    // Set/Restore the dialog size based on last position on screen
+    // The setSize() method is inherited from BaseStepDialog
     setSize();
-    meta.setChanged( changed );
+
+    // populate the dialog with the values from the meta object
+    getData();
+
+    // restore the changed flag to original value, as the modify listeners fire during dialog population
+    meta.setChanged(changed);
+
+    // open dialog and enter event loop
     shell.open();
-    while ( !shell.isDisposed() ) {
-      if ( !display.readAndDispatch() ) {
+    while (!shell.isDisposed()) {
+      if (!display.readAndDispatch()) {
         display.sleep();
       }
     }
+
+    // at this point the dialog has closed, so either ok() or cancel() have been executed
+    // The "stepname" variable is inherited from BaseStepDialog
     return stepname;
+  }
+
+  /**
+   * Copy information from the meta-data input to the dialog fields.
+   */
+  public void getData() {
+    wStepname.selectAll();
+    wInFieldCombo.setText(Const.NVL(meta.getInField(), ""));
+    wOutField.setText(Const.NVL(meta.getOutField(), ""));
+    wBrokerURI.setText(Const.NVL(meta.getBrokerURI(), ""));
+    wBackendURI.setText(Const.NVL(meta.getBackendURI(),""));
+    wBatchSize.setText(String.valueOf(meta.getBatchSize()));
+    wNerTask.setText(Const.NVL(meta.getNerTask(), ""));
+    wHardTimeLimit.setText(String.valueOf(meta.getHardTimeLimit()));
+    wTimeLimit.setText(String.valueOf(meta.getTimeLimit()));
+    wDelay.setText(String.valueOf(meta.getDelay()));
+    wStepname.setFocus();
   }
 
   private Image getImage() {
@@ -461,7 +460,28 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
   }
 
   private void ok() {
-    stepname = wStepNameField.getText();
+    stepname = wStepname.getText();
+    String inField = wInFieldCombo.getText();
+    String outField = wOutField.getText();
+    String brokerURI = wBrokerURI.getText();
+    String backendURI = wBackendURI.getText();
+    String batchSize = wBatchSize.getText();
+    String nerTask = wNerTask.getText();
+    String hardTimeLimit = wHardTimeLimit.getText();
+    String timeLimit = wTimeLimit.getText();
+    String delay = wDelay.getText();
+    if(batchSize == null){
+      batchSize = "1";
+    }
+    meta.setInField(inField);
+    meta.setOutField(outField);
+    meta.setBrokerURI(brokerURI);
+    meta.setBackendURI(backendURI);
+    meta.setBatchSize(Long.parseLong(batchSize));
+    meta.setNerTask(nerTask);
+    meta.setHardTimeLimit(Long.parseLong(hardTimeLimit));
+    meta.setTimeLimit(Long.parseLong(timeLimit));
+    meta.setDelay(Long.parseLong(delay));
     dispose();
   }
 }

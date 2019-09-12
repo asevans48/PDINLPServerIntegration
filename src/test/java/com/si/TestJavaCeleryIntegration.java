@@ -7,13 +7,37 @@
  */
 package com.si;
 
-import org.junit.jupiter.api.Test;
-
+import org.junit.Test;
 
 public class TestJavaCeleryIntegration {
 
     @Test
-    public void shouldIntegrateWithRunningCeleryApplication(){
+    public void testShouldCreateAConfiguration(){
+
+    }
+
+    @Test
+    public void testShouldConnect(){
+
+    }
+
+    @Test
+    public void shouldProcessARow(){
+
+    }
+
+    @Test
+    public void shouldProcessABatchInNER(){
+
+    }
+
+    @Test
+    public void shouldProcessABatchInSentTokenizer(){
+
+    }
+
+    @Test
+    public void shouldProcessABatchInTopicTiler(){
 
     }
 }

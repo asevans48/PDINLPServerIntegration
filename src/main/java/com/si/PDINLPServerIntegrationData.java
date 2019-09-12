@@ -18,17 +18,39 @@
  */
 package com.si;
 
+import com.si.celery.Celery;
+import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
 
 
 public class PDINLPServerIntegrationData extends BaseStepData implements StepDataInterface {
   // Add any execution-specific data here
+  private Celery celery;
+  public RowMetaInterface outputRowMeta;
 
   /**
-   * 
+   * Constructor
    */
   public PDINLPServerIntegrationData() {
     super();
+  }
+
+  /**
+   * Set the celery object
+   *
+   * @param celery  The celery object
+   */
+  public void setCelery(Celery celery){
+    this.celery = celery;
+  }
+
+  /**
+   * Obtain the celery object
+   *
+   * @return  The celery object
+   */
+  public Celery getCelery(){
+    return this.celery;
   }
 }
