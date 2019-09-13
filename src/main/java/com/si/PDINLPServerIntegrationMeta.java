@@ -55,6 +55,7 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
   private String outField;
   private Long batchSize;
   private String defaultQueue;
+  private String defaultRoutingKey;
   private String brokerURI;
   private String backendURI;
   private String nerTask;
@@ -62,6 +63,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
   private Long timeLimit = 180000L;
   private Long delay = 0L;
   private Long attempts = 0L;
+  private String entities;
+
   private static Class<?> PKG = PDINLPServerIntegration.class; // for i18n purposes, needed by Translator2!!   $NON-NLS-1$
 
   public PDINLPServerIntegrationMeta() {
@@ -156,6 +159,22 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     this.attempts = attempts;
   }
 
+  public String getDefaultRoutingKey() {
+    return defaultRoutingKey;
+  }
+
+  public void setDefaultRoutingKey(String defaultRoutingKey) {
+    this.defaultRoutingKey = defaultRoutingKey;
+  }
+
+  public String getEntities() {
+    return entities;
+  }
+
+  public void setEntities(String entities) {
+    this.entities = entities;
+  }
+
   public Object clone() {
     Object retval = super.clone();
     return retval;
@@ -181,6 +200,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     xml.append(XMLHandler.addTagValue("delay", this.delay));
     xml.append(XMLHandler.addTagValue("defaultQueue", this.defaultQueue));
     xml.append(XMLHandler.addTagValue("attempts", this.attempts));
+    xml.append(XMLHandler.addTagValue("routingKey", this.defaultRoutingKey));
+    xml.append(XMLHandler.addTagValue("entities", this.entities));
     return xml.toString();
   }
   
@@ -198,6 +219,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
       setDelay(Long.parseLong(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "delay"))));
       setAttempts(Long.parseLong(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "attempts"))));
       setDefaultQueue(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "defaultQueue")), ""));
+      setEntities(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "entities")), ""));
+      setDefaultRoutingKey(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "routingKey")), ""));
     }catch(Exception e){
       throw new KettleXMLException("NLP Server Plugin unable to read step info from XML node", e);
     }
@@ -215,6 +238,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     this.delay = 0L;
     this.defaultQueue = "celery";
     this.attempts = 1L;
+    this.defaultRoutingKey = "celery";
+    this.entities = "";
   }
 
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
@@ -228,7 +253,9 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     this.timeLimit = rep.getStepAttributeInteger(id_step, "timeLimit");
     this.delay = rep.getStepAttributeInteger(id_step, "delay");
     this.defaultQueue = rep.getStepAttributeString(id_step, "defaultQueue");
-    this.attempts = rep.getJobEntryAttributeInteger(id_step, "attempts");
+    this.attempts = rep.getStepAttributeInteger(id_step, "attempts");
+    this.entities = rep.getStepAttributeString(id_step, "entities");
+    this.defaultRoutingKey = rep.getStepAttributeString(id_step, "routingKey");
   }
   
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step )
@@ -244,6 +271,8 @@ public class PDINLPServerIntegrationMeta extends BaseStepMeta implements StepMet
     rep.saveStepAttribute(id_transformation, id_step, "delay", this.delay);
     rep.saveStepAttribute(id_transformation, id_step, "defaultQueue", this.defaultQueue);
     rep.saveStepAttribute(id_transformation, id_step, "attempts", this.attempts);
+    rep.saveStepAttribute(id_transformation, id_step, "routingKey", this.defaultRoutingKey);
+    rep.saveStepAttribute(id_transformation, id_step, "entities", this.entities);
   }
   
   public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep, 

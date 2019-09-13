@@ -108,6 +108,14 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
   private TextVar wAttempts;
   private FormData fdlAttempts, fdlAttemptsField;
 
+  private Label entities;
+  private TextVar wEntities;
+  private FormData fdlEntities, fdlEntitiesField;
+
+  private Label routingKey;
+  private TextVar wRoutingKey;
+  private FormData fdlRoutingKey, fdlRoutingKeyField;
+
 
   private Button wCancel;
   private Button wOK;
@@ -227,6 +235,26 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlOutField.right = new FormAttachment(100, 0);
     wOutField.setLayoutData(fdlOutField);
 
+    //entities
+    entities = new Label(shell, SWT.RIGHT);
+    entities.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.Entities"));
+    props.setLook( entities );
+    fdlEntities = new FormData();
+    fdlEntities.left = new FormAttachment( 0, 0 );
+    fdlEntities.right = new FormAttachment( middle, -margin );
+    fdlEntities.top = new FormAttachment( wOutField, 15 );
+    entities.setLayoutData( fdlEntities);
+
+    wEntities = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wEntities.setText("");
+    wEntities.addModifyListener(lsMod);
+    props.setLook(wEntities);
+    fdlEntitiesField = new FormData();
+    fdlEntitiesField.left = new FormAttachment(middle, 0);
+    fdlEntitiesField.top = new FormAttachment(wOutField, 15);
+    fdlEntitiesField.right = new FormAttachment(100, 0);
+    wEntities.setLayoutData(fdlEntitiesField);
+
     //set the broker  URI (optional if environment var set)
     brokerURI = new Label(shell, SWT.RIGHT);
     brokerURI.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.Broker"));
@@ -234,7 +262,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlBrokerURI = new FormData();
     fdlBrokerURI.left = new FormAttachment( 0, 0 );
     fdlBrokerURI.right = new FormAttachment( middle, -margin );
-    fdlBrokerURI.top = new FormAttachment( wOutField, 15 );
+    fdlBrokerURI.top = new FormAttachment( wEntities, 15 );
     brokerURI.setLayoutData( fdlBrokerURI);
 
     wBrokerURI = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -243,7 +271,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     props.setLook(wBrokerURI);
     fdlBrokerURIField = new FormData();
     fdlBrokerURIField.left = new FormAttachment(middle, 0);
-    fdlBrokerURIField.top = new FormAttachment(wOutField, 15);
+    fdlBrokerURIField.top = new FormAttachment(wEntities, 15);
     fdlBrokerURIField.right = new FormAttachment(100, 0);
     wBrokerURI.setLayoutData(fdlBrokerURIField);
 
@@ -388,14 +416,34 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlDefaultQueueField.right = new FormAttachment(100, 0);
     wDefaultQueue.setLayoutData(fdlDefaultQueueField);
 
+    //routing key (default to celery)
+    routingKey = new Label(shell, SWT.RIGHT);
+    routingKey.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.RoutingKey"));
+    props.setLook( routingKey );
+    fdlRoutingKey = new FormData();
+    fdlRoutingKey.left = new FormAttachment( 0, 0 );
+    fdlRoutingKey.right = new FormAttachment( middle, -margin );
+    fdlRoutingKey.top = new FormAttachment( wDefaultQueue, 15 );
+    routingKey.setLayoutData( fdlRoutingKey);
+
+    wRoutingKey = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wRoutingKey.setText("");
+    wRoutingKey.addModifyListener(lsMod);
+    props.setLook(wRoutingKey);
+    fdlRoutingKeyField = new FormData();
+    fdlRoutingKeyField.left = new FormAttachment(middle, 0);
+    fdlRoutingKeyField.top = new FormAttachment(wDefaultQueue, 15);
+    fdlRoutingKeyField.right = new FormAttachment(100, 0);
+    wRoutingKey.setLayoutData(fdlRoutingKeyField);
+
     //number of attempts
     attempts = new Label(shell, SWT.RIGHT);
-    attempts.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.NERTask"));
+    attempts.setText(BaseMessages.getString(PKG, "NominatimPDIPluginDialog.Fields.Attempts"));
     props.setLook( attempts );
     fdlAttempts = new FormData();
     fdlAttempts.left = new FormAttachment( 0, 0 );
     fdlAttempts.right = new FormAttachment( middle, -margin );
-    fdlAttempts.top = new FormAttachment( wDefaultQueue, 15 );
+    fdlAttempts.top = new FormAttachment( wRoutingKey, 15 );
     attempts.setLayoutData( fdlAttempts);
 
     wAttempts = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -404,7 +452,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     props.setLook(wDefaultQueue);
     fdlAttemptsField = new FormData();
     fdlAttemptsField.left = new FormAttachment(middle, 0);
-    fdlAttemptsField.top = new FormAttachment(wDefaultQueue, 15);
+    fdlAttemptsField.top = new FormAttachment(wRoutingKey, 15);
     fdlAttemptsField.right = new FormAttachment(100, 0);
     wAttempts.setLayoutData(fdlAttemptsField);
 
@@ -494,6 +542,8 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     wDelay.setText(String.valueOf(meta.getDelay()));
     wDefaultQueue.setText(String.valueOf(meta.getDefaultQueue()));
     wAttempts.setText(String.valueOf(meta.getAttempts()));
+    wEntities.setText(Const.NVL(meta.getEntities(), ""));
+    wRoutingKey.setText(Const.NVL(meta.getEntities(), ""));
     wStepname.setFocus();
   }
 
@@ -525,6 +575,8 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     String delay = wDelay.getText();
     String defaultQueue = wDefaultQueue.getText();
     String attempts = wAttempts.getText();
+    String entities = wEntities.getText();
+    String routingKey = wRoutingKey.getText();
     if(batchSize == null){
       batchSize = "1";
     }
@@ -542,6 +594,8 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     meta.setDelay(Long.parseLong(delay));
     meta.setDefaultQueue(defaultQueue);
     meta.setAttempts(Long.parseLong(attempts));
+    meta.setEntities(entities);
+    meta.setDefaultRoutingKey(routingKey);
     dispose();
   }
 }
