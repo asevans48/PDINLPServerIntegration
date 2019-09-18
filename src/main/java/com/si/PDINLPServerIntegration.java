@@ -18,6 +18,7 @@
  */
 package com.si;
 
+import com.si.rows.RowSet;
 import com.si.utilities.Utilities;
 import org.json.simple.parser.ParseException;
 import org.pentaho.di.core.exception.KettleException;
@@ -68,6 +69,8 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
      *          The data to initialize
      */
     public boolean init( StepMetaInterface stepMetaInterface, StepDataInterface stepDataInterface ) {
+      this.data = (PDINLPServerIntegrationData) stepDataInterface;
+      this.meta = (PDINLPServerIntegrationMeta) stepMetaInterface;
       return super.init( stepMetaInterface, stepDataInterface );
     }
 
@@ -79,8 +82,8 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
    */
   public void setupProcessor() throws KettleException{
       RowMetaInterface inMeta = getInputRowMeta().clone();
-      data.outputRowMeta = inMeta;
-      meta.getFields(data.outputRowMeta, getStepname(), null, null, this, null, null);
+      this.data.outputRowMeta = inMeta.clone();
+      this.meta.getFields(this.data.outputRowMeta, getStepname(), null, null, this, null, null);
       first = false;
     }
 
@@ -89,7 +92,7 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
    * @param rows  The rows
    * @throws KettleStepException  thrown by kettle
    */
-  public void pushRows(Object[][] rows) throws KettleStepException {
+  public void pushRows(RowSet rows) throws KettleStepException {
     for(Object[] row: rows) {
       putRow(getInputRowMeta(), row);
     }
@@ -126,7 +129,6 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
         this.utilities.setData(data);
         this.utilities.setMeta(meta);
         this.setupProcessor();
-        int bsize = meta.getBatchSize().intValue();
         this.batch = new ArrayList<Object[]>();
       }
 
@@ -137,16 +139,15 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
         this.batch.add(nrow);
         this.currBatch += 1;
       }
-
       if((this.currBatch == this.meta.getBatchSize().intValue() || nrow == null) && this.batch.size() > 0){
         Object[][] obatch = new Object[this.batch.size()][];
         for(int i = 0; i < this.batch.size(); i++){
           Object[] or = this.batch.get(i);
           obatch[i] = or;
         }
-        Object[][] results = obatch;
+        RowSet rowSet = null;
         try {
-          results = this.utilities.getResults(obatch);
+          rowSet = this.utilities.getResults(obatch);
         } catch (CloneNotSupportedException e) {
           e.printStackTrace();
         } catch (InterruptedException e) {
@@ -158,7 +159,7 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
         } catch (ParseException e) {
           e.printStackTrace();
         }
-        this.pushRows(results);
+        this.pushRows(rowSet);
         this.batch = new ArrayList<Object[]>();
       }
 

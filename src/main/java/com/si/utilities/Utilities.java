@@ -6,9 +6,15 @@ import com.si.celery.Celery;
 import com.si.celery.conf.Config;
 import com.si.celery.enums.ThreadPoolType;
 import com.si.celery.task.result.AsyncResult;
+import com.si.rows.RowSet;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -96,31 +102,216 @@ public class Utilities {
     }
 
     /**
+     * Get the NER Results
+     *
+     * @param outRows    Output Row Set
+     * @param objArr    The object array
+     * @param inrow     The input row
+     * @return  RowSet containing the object arrays
+     */
+    private RowSet getNERResults(RowSet outRows, JSONArray objArr, Object[] inrow){
+        if(objArr != null && objArr.size() > 0) {
+            String outFieldName = this.meta.getOutField();
+            int idx = this.data.outputRowMeta.indexOfValue(outFieldName);
+            if(idx < inrow.length){
+                for(int i = 0; i < objArr.size(); i++){
+                    Object[] cloneRow = inrow.clone();
+                    Object val = objArr.get(i);
+                    if(val != null){
+                        cloneRow[idx] = val;
+                    }
+                    outRows.add(cloneRow);
+                }
+            }else{
+                throw new IndexOutOfBoundsException("Field Index Out of Bounds");
+            }
+        }
+        return outRows;
+    }
+
+    /**
+     * Package a specfic named entity
+     * @param inRows    The input rows
+     * @param entityType    The entity type
+     * @param resultObj     The result object
+     * @param inRow     The input row
+     * @return  The updated row set
+     */
+    private RowSet getNamedEntities(RowSet inRows, String entityType, JSONObject resultObj, Object[] inRow){
+        Object results = resultObj.get(entityType);
+        if(results != null) {
+            JSONArray resultsArr = (JSONArray) results;
+            return this.getNERResults(inRows, resultsArr, inRow);
+        }else{
+            inRows.add(inRow);
+        }
+        return inRows;
+    }
+
+    /**
+     * Get the entities
+     *
+     * @param inRows        The input rows
+     * @param resultObj     The result batch for the row
+     * @param inRow     The input row from the previous step
+     * @return  The updated RowSet
+     */
+    private RowSet getNamedEntityResults(RowSet inRows, JSONObject resultObj, Object[] inRow){
+        RowSet outRowSet = inRows;
+        String[] entities = meta.getEntities().split(";");
+        List<String> entityList = Arrays.asList(entities);
+        Boolean parsed = false;
+        if(entityList.contains("PERSON")){
+            outRowSet = this.getNamedEntities(inRows, "PERSON", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("ORGANIZATION")){
+            outRowSet = this.getNamedEntities(inRows, "ORGANIZATION", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("LOCATION")){
+            outRowSet = this.getNamedEntities(inRows, "LOCATION", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("FACILITY")){
+            outRowSet = this.getNamedEntities(inRows, "FACILITY", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("LANGUAGE")){
+            outRowSet = this.getNamedEntities(inRows, "LANGUAGE", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("DATE")){
+            outRowSet = this.getNamedEntities(inRows, "DATE", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("EVENT")){
+            outRowSet = this.getNamedEntities(inRows, "EVENT", resultObj, inRow);
+            parsed = true;
+        }
+
+        if(entityList.contains("PRODUCT")){
+            outRowSet = this.getNamedEntities(inRows, "PRODUCT", resultObj, inRow);
+            parsed = true;
+        }
+        if(parsed == false){
+            throw new IllegalArgumentException("Entity Not Found");
+        }
+        return outRowSet;
+    }
+
+    /**
+     * For relevant tasks below. Append a row to the row set.
+     *
+     * @param inRows    The input row set
+     * @param output    The output string
+     * @param inRow     The input row object
+     * @return  The updated row set
+     */
+    private RowSet appendStringToSet(RowSet inRows, String output, Object[] inRow){
+        String outField = this.meta.getOutField();
+        int idx = this.data.outputRowMeta.indexOfValue(outField);
+        if(idx < inRow.length){
+            inRow[idx] = output;
+        }
+        return inRows;
+    }
+
+    /**
+     * Obtain text rows from the result set
+     *
+     * @param inRows    The input row set
+     * @param resultArr The result array
+     * @param inRow     The object array
+     * @return  The updated row set
+     */
+    private RowSet getTextRows(RowSet inRows, JSONArray resultArr, Object[] inRow){
+        RowSet outRows = inRows;
+        if(resultArr != null && resultArr.size() > 0){
+            for(int i = 0; i < resultArr.size(); i++){
+                String result = (String) resultArr.get(i);
+                outRows = this.appendStringToSet(inRows, result, inRow);
+            }
+        }else{
+            outRows.add(inRow);
+        }
+        return outRows;
+    }
+
+    /**
+     * Process Result Rows
+     * @param jarrObj   The object from the results
+     * @param task      The task
+     * @param inrows    The input rows
+     * @param inRowSet  The input row set
+     * @return  The updated row set
+     */
+    private RowSet processResultRows(Object jarrObj, String task, Object[][] inrows, RowSet inRowSet){
+        RowSet outRows = inRowSet;
+        if(jarrObj != null) {
+            JSONArray jarr = (JSONArray) jarrObj;
+            for(Object[] row: inrows) {
+                if(task.equals("nertask")) {
+                    for(int i = 0; i < jarr.size(); i++) {
+                        JSONObject jobj = (JSONObject) jarr.get(i);
+                        outRows = this.getNamedEntityResults(inRowSet, jobj, row);
+                    }
+                }else if(task.equals("sentencetokenizer") || task.equals("texttilingtokenizer")){
+                    outRows = this.getTextRows(inRowSet, jarr, row);
+                }
+            }
+        }else{
+            for(Object[] row: inrows) {
+                outRows.add(row);
+            }
+        }
+        return outRows;
+    }
+
+    /**
      * Returns the results packaged into the new rows
      * @param inrows  The input rows
      * @param result The result from Celery which should contain a batch of results
-     * @return  A packaged double array of results
+     * @return  A RowSet
      * @throws ParseException  thrown when the celery request fails
      * @throws AssertionError  thrown when result size does not equal batch size
+     * @throws IllegalArgumentException thrown when task or another critical variable is null
      */
-    public Object[][] packageResult(Object[][] inrows, AsyncResult result) throws ParseException, AssertionError {
-        Object[][] nrows = new Object[inrows.length][];
+    public RowSet packageResult(Object[][] inrows, AsyncResult result) throws ParseException, AssertionError, IllegalArgumentException {
+        RowSet outRows = new RowSet();
         result.parsePayloadJson();
         if(result.isSuccess()) {
-            JSONArray resultBatch = (JSONArray) result.getResult();
-            if (resultBatch.size() == inrows.length) {
-                for (int i = 0; i < resultBatch.size(); i++) {
-                    String resultStr = (String) resultBatch.get(i);
-                    Object[] r = inrows[i].clone();
-                    int idx = this.data.outputRowMeta.indexOfValue(this.meta.getOutField());
-                    r[idx] = resultStr;
-                    nrows[i] = r;
+            JSONObject jobj= (JSONObject) result.getPayload();
+            if (jobj != null && ((Boolean) jobj.get("err")) == false) {
+                String task = this.meta.getNerTask().toLowerCase().trim();
+                if(task != null) {
+                    Object jarrObj = null;
+                    if (task.equals("nertask")) {
+                        jarrObj = jobj.get("entities");
+                    }else if(task.equals("sentencetokenizer")){
+                        jarrObj = jobj.get("sentences");
+                    }else if(task.equals("texttilingtokenizer")){
+                        jarrObj = jobj.get("topics");
+                    }
+                    if(jarrObj != null){
+                        outRows = this.processResultRows(jarrObj, task, inrows, outRows);
+                    }else{
+                        throw new IllegalArgumentException("Task not Found");
+                    }
+                }else{
+                    throw new IllegalArgumentException("NER Task Not Specified");
                 }
             } else {
                 throw new AssertionError("Result from Celery Must be Same Length as Sent Batch");
             }
         }
-        return nrows;
+        return outRows;
     }
 
     /**
@@ -166,8 +357,9 @@ public class Utilities {
      * @throws ExecutionException When the future fails
      * @throws TimeoutException When the future fails
      * @throws ParseException Thrown when parsing the results fails
+     * @throws IllegalArgumentException Thrown when an option is missing
      */
-    public Object[][] getResults(Object[][] batch) throws CloneNotSupportedException, InterruptedException, ExecutionException, TimeoutException, ParseException {
+    public RowSet getResults(Object[][] batch) throws CloneNotSupportedException, IllegalArgumentException, InterruptedException, ExecutionException, TimeoutException, ParseException {
         //create celery if necessary
         if(this.data.getCelery() == null){
             this.setCelery();
@@ -180,7 +372,6 @@ public class Utilities {
         //send task and get the future
         String taskName = this.meta.getNerTask();
         Future<AsyncResult> fut = this.sendTask(taskName, args, null);
-
         //process the return value
         AsyncResult rval = null;
         int attempt = 0;
@@ -192,7 +383,7 @@ public class Utilities {
             }
             attempt += 1;
         }while((rval == null || rval.isSuccess() == false) && attempt < this.meta.getAttempts());
-        Object[][] packagedRows = this.packageResult(batch, rval);
+        RowSet packagedRows = this.packageResult(batch, rval);
         return packagedRows;
     }
 

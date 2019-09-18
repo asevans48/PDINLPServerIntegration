@@ -93,7 +93,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
   private FormData fdlDelay, fdlDelayField;
 
   private Label nerTask;
-  private TextVar wNerTask;
+  private CCombo wNerTask;
   private FormData fdlNerTask, fdlNerTaskField;
 
   private Label defaultQueue;
@@ -305,15 +305,17 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlNerTask.top = new FormAttachment( wBackendURI, 15 );
     nerTask.setLayoutData( fdlNerTask);
 
-    wNerTask = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wNerTask.setText("");
-    wNerTask.addModifyListener(lsMod);
-    props.setLook(wNerTask);
+    wNerTask= new CCombo( shell, SWT.BORDER );
+    wNerTask.add("NERTask");
+    wNerTask.add("SentenceTokenizer");
+    wNerTask.add("TextTilingTokenizer");
+
+    wNerTask.addModifyListener( lsMod );
     fdlNerTaskField = new FormData();
-    fdlNerTaskField.left = new FormAttachment(middle, 0);
-    fdlNerTaskField.top = new FormAttachment(wBackendURI, 15);
-    fdlNerTaskField.right = new FormAttachment(100, 0);
-    wNerTask.setLayoutData(fdlNerTaskField);
+    fdlNerTaskField.left = new FormAttachment( middle, 0 );
+    fdlNerTaskField.top = new FormAttachment( wBackendURI, 15 );
+    fdlNerTaskField.right = new FormAttachment( 100, 0 );
+    wInFieldCombo.setLayoutData( fdlNerTaskField );
 
     //hard timeLimit (default 180000)
     hardTimeLimit = new Label(shell, SWT.RIGHT);
@@ -353,7 +355,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlTimeLimitField.left = new FormAttachment(middle, 0);
     fdlTimeLimitField.top = new FormAttachment(hardTimeLimit, 15);
     fdlTimeLimitField.right = new FormAttachment(100, 0);
-    wBatchSize.setLayoutData(fdlBatchSize);
+    wTimeLimit.setLayoutData(fdlTimeLimitField);
 
 
     //delay (default 180000)
@@ -364,7 +366,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlDelay.left = new FormAttachment( 0, 0 );
     fdlDelay.right = new FormAttachment( middle, -margin );
     fdlDelay.top = new FormAttachment( timeLimit, 15 );
-    delay.setLayoutData( fdlBatchSize);
+    delay.setLayoutData( fdlDelay);
 
     wDelay = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     wDelay.setText("");
@@ -394,7 +396,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlBatchSizeField.left = new FormAttachment(middle, 0);
     fdlBatchSizeField.top = new FormAttachment(wDelay, 15);
     fdlBatchSizeField.right = new FormAttachment(100, 0);
-    wBatchSize.setLayoutData(fdlBatchSize);
+    wBatchSize.setLayoutData(fdlBatchSizeField);
 
     //set the default queue
     defaultQueue = new Label(shell, SWT.RIGHT);
@@ -494,6 +496,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     wTimeLimit.addSelectionListener(lsDef);
     wDelay.addSelectionListener(lsDef);
     wDefaultQueue.addSelectionListener(lsDef);
+    wRoutingKey.addSelectionListener(lsDef);
     wAttempts.addSelectionListener(lsDef);
 
     // Detect X or ALT-F4 or something that kills this window and cancel the dialog properly
