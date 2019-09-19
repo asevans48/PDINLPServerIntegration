@@ -113,6 +113,9 @@ public class Utilities {
         if(objArr != null && objArr.size() > 0) {
             String outFieldName = this.meta.getOutField();
             int idx = this.data.outputRowMeta.indexOfValue(outFieldName);
+            if(idx <0){
+                throw new IndexOutOfBoundsException("Output Index Does Not Exist");
+            }
             if(idx < inrow.length){
                 for(int i = 0; i < objArr.size(); i++){
                     Object[] cloneRow = inrow.clone();
@@ -125,6 +128,8 @@ public class Utilities {
             }else{
                 throw new IndexOutOfBoundsException("Field Index Out of Bounds");
             }
+        }else{
+            outRows.add(inrow);
         }
         return outRows;
     }
@@ -162,42 +167,42 @@ public class Utilities {
         List<String> entityList = Arrays.asList(entities);
         Boolean parsed = false;
         if(entityList.contains("PERSON")){
-            outRowSet = this.getNamedEntities(inRows, "PERSON", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "people", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("ORGANIZATION")){
-            outRowSet = this.getNamedEntities(inRows, "ORGANIZATION", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "organization", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("LOCATION")){
-            outRowSet = this.getNamedEntities(inRows, "LOCATION", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "location", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("FACILITY")){
-            outRowSet = this.getNamedEntities(inRows, "FACILITY", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "fac", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("LANGUAGE")){
-            outRowSet = this.getNamedEntities(inRows, "LANGUAGE", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "languages", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("DATE")){
-            outRowSet = this.getNamedEntities(inRows, "DATE", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "dates", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("EVENT")){
-            outRowSet = this.getNamedEntities(inRows, "EVENT", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "events", resultObj, inRow);
             parsed = true;
         }
 
         if(entityList.contains("PRODUCT")){
-            outRowSet = this.getNamedEntities(inRows, "PRODUCT", resultObj, inRow);
+            outRowSet = this.getNamedEntities(inRows, "products", resultObj, inRow);
             parsed = true;
         }
         if(parsed == false){
@@ -219,6 +224,8 @@ public class Utilities {
         int idx = this.data.outputRowMeta.indexOfValue(outField);
         if(idx < inRow.length){
             inRow[idx] = output;
+        }else{
+            throw new IndexOutOfBoundsException("Index of Output Row Does not Exist");
         }
         inRows.add(inRow);
         return inRows;

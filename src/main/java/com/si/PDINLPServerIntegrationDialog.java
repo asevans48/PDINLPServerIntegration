@@ -315,7 +315,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlNerTaskField.left = new FormAttachment( middle, 0 );
     fdlNerTaskField.top = new FormAttachment( wBackendURI, 15 );
     fdlNerTaskField.right = new FormAttachment( 100, 0 );
-    wInFieldCombo.setLayoutData( fdlNerTaskField );
+    wNerTask.setLayoutData( fdlNerTaskField );
 
     //hard timeLimit (default 180000)
     hardTimeLimit = new Label(shell, SWT.RIGHT);
@@ -324,7 +324,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     fdlHardTimeLimit = new FormData();
     fdlHardTimeLimit.left = new FormAttachment( 0, 0 );
     fdlHardTimeLimit.right = new FormAttachment( middle, -margin );
-    fdlHardTimeLimit.top = new FormAttachment( wNerTask, 15 );
+    fdlHardTimeLimit.top = new FormAttachment( nerTask, 15 );
     hardTimeLimit.setLayoutData( fdlHardTimeLimit);
 
     wHardTimeLimit = new TextVar(transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -333,7 +333,7 @@ public class PDINLPServerIntegrationDialog extends BaseStepDialog implements Ste
     props.setLook(wHardTimeLimit);
     fdlHardTimeLimitField = new FormData();
     fdlHardTimeLimitField.left = new FormAttachment(middle, 0);
-    fdlHardTimeLimitField.top = new FormAttachment(wNerTask, 15);
+    fdlHardTimeLimitField.top = new FormAttachment(nerTask, 15);
     fdlHardTimeLimitField.right = new FormAttachment(100, 0);
     wHardTimeLimit.setLayoutData(fdlHardTimeLimitField);
 

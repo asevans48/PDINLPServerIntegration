@@ -135,6 +135,7 @@ public class TestTransformation {
         List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
                 TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
         assert(result.size() == 2);
+        assert(result.get(0).getRowMeta().indexOfValue(meta.getOutField()) >=0);
     }
 
     @Test

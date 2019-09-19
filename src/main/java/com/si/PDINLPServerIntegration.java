@@ -20,6 +20,7 @@ package com.si;
 
 import com.si.rows.RowSet;
 import com.si.utilities.Utilities;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.simple.parser.ParseException;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
@@ -95,7 +96,7 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
    */
   public void pushRows(RowSet rows) throws KettleStepException {
     for(Object[] row: rows) {
-      putRow(getInputRowMeta(), row);
+      putRow(data.outputRowMeta, row);
     }
   }
 
@@ -111,14 +112,39 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
          rowSet = this.utilities.getResults(obatch);
        } catch (CloneNotSupportedException e) {
          e.printStackTrace();
+         if(isBasic()){
+           String trace = ExceptionUtils.getStackTrace(e);
+           logBasic(e.getMessage());
+           logBasic(trace);
+         }
        } catch (InterruptedException e) {
          e.printStackTrace();
+         if(isBasic()){
+           String trace = ExceptionUtils.getStackTrace(e);
+           logBasic(e.getMessage());
+           logBasic(trace);
+         }
        } catch (ExecutionException e) {
          e.printStackTrace();
+         if(isBasic()){
+           String trace = ExceptionUtils.getStackTrace(e);
+           logBasic(e.getMessage());
+           logBasic(trace);
+         }
        } catch (TimeoutException e) {
          e.printStackTrace();
+         if(isBasic()){
+           String trace = ExceptionUtils.getStackTrace(e);
+           logBasic(e.getMessage());
+           logBasic(trace);
+         }
        } catch (ParseException e) {
          e.printStackTrace();
+         if(isBasic()){
+           String trace = ExceptionUtils.getStackTrace(e);
+           logBasic(e.getMessage());
+           logBasic(trace);
+         }
        }
        this.pushRows(rowSet);
        this.batch = new ArrayList<Object[]>();
