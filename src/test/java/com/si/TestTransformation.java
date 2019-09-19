@@ -6,8 +6,6 @@ package com.si;
  */
 
 
-import com.si.celery.conf.Config;
-import com.si.celery.enums.BackendType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.pentaho.di.core.KettleEnvironment;
@@ -51,12 +49,65 @@ public class TestTransformation {
         KettleEnvironment.init();
     }
 
-    private static List<RowMetaAndData> getInputData() {
+    private static List<RowMetaAndData> getNERInputData() {
         List<RowMetaAndData> input = new ArrayList<RowMetaAndData>();
         RowMeta rm = new RowMeta();
         rm.addValueMeta( new ValueMetaString( fieldName ) );
-        input.add( new RowMetaAndData( rm, new Object[]{ "My name is Slim Shady" } ) );
-        input.add( new RowMetaAndData( rm, new Object[]{ "My name is Drew" } ) );
+        input.add( new RowMetaAndData( rm, new Object[]{ "Jackson Pollock was a famous artist." } ) );
+        input.add( new RowMetaAndData( rm, new Object[]{ "My name is Drew." } ) );
+        return input;
+    }
+
+    private static List<RowMetaAndData> getMultiNERInputData(){
+        List<RowMetaAndData> input = new ArrayList<RowMetaAndData>();
+        RowMeta rm = new RowMeta();
+        rm.addValueMeta( new ValueMetaString( fieldName ) );
+        for(int i = 0; i < 7500; i++) {
+            input.add(new RowMetaAndData(rm, new Object[]{"Jackson Pollock was a famous artist."}));
+            input.add(new RowMetaAndData(rm, new Object[]{"My name is Drew."}));
+        }
+        return input;
+    }
+
+    private static List<RowMetaAndData> getSentInputData() {
+        List<RowMetaAndData> input = new ArrayList<RowMetaAndData>();
+        RowMeta rm = new RowMeta();
+        rm.addValueMeta( new ValueMetaString( fieldName ) );
+        input.add( new RowMetaAndData( rm, new Object[]{ "Jackson Pollock was a famous artist." } ) );
+        input.add( new RowMetaAndData( rm, new Object[]{ "My name is Drew. This is another sentence." } ) );
+        return input;
+    }
+
+    private static List<RowMetaAndData> getMultiSentInputData() {
+        List<RowMetaAndData> input = new ArrayList<RowMetaAndData>();
+        RowMeta rm = new RowMeta();
+        rm.addValueMeta( new ValueMetaString( fieldName ) );
+        for(int i = 0; i < 7500; i++) {
+            input.add(new RowMetaAndData(rm, new Object[]{"Jackson Pollock was a famous artist."}));
+            input.add(new RowMetaAndData(rm, new Object[]{"My name is Drew. This is another sentence."}));
+        }
+        return input;
+    }
+
+    private static List<RowMetaAndData> getTopicInputData() {
+        List<RowMetaAndData> input = new ArrayList<RowMetaAndData>();
+        RowMeta rm = new RowMeta();
+        rm.addValueMeta( new ValueMetaString( fieldName ) );
+        String topicText= "Every task must have a unique name.\n" +
+                "\n" +
+                "    If no explicit name is provided the task decorator will generate one\n" +
+                "    for you, and this name will be based on 1) the module the task is \n" +
+                "    defined in, and 2) the name of the task function.\n" +
+                "    +\n" +
+                "    Example setting explicit name.\n" +
+                "    \n" +
+                "    The eager mode enabled by the task_always_eager setting is by definition\n" +
+                "    not suitable for unit tests.\n" +
+                "\n" +
+                "    When testing with eager mode you are only testing an emulation of what\n" +
+                "    happens in a worker, and there are many discrepancies between the emulation\n" +
+                "    and what happens in reality.";
+        input.add( new RowMetaAndData( rm, new Object[]{ topicText } ) );
         return input;
     }
 
@@ -68,7 +119,7 @@ public class TestTransformation {
         meta.setBackendURI(this.getBackendURI());
         meta.setDefaultRoutingKey("celery");
         meta.setDefaultQueue("celery");
-        meta.setBatchSize(1L);
+        meta.setBatchSize(2L);
         meta.setInField("testString");
         meta.setOutField("testOut");
         return meta;
@@ -80,9 +131,10 @@ public class TestTransformation {
         meta.setNerTask("NERTask");
         meta.setEntities("PERSON");
         TransMeta transMeta = TransTestFactory.generateTestTransformation(null, meta, "testStep");
-        List<RowMetaAndData> input = getInputData();
+        List<RowMetaAndData> input = getNERInputData();
         List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
                 TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
+        assert(result.size() == 2);
     }
 
     @Test
@@ -90,9 +142,10 @@ public class TestTransformation {
         PDINLPServerIntegrationMeta meta= this.getTestMeta();
         meta.setNerTask("SentenceTokenizer");
         TransMeta transMeta = TransTestFactory.generateTestTransformation(null, meta, "testStep");
-        List<RowMetaAndData> input = getInputData();
+        List<RowMetaAndData> input = getSentInputData();
         List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
                 TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
+        assert(result.size() == 3);
     }
 
     @Test
@@ -100,13 +153,45 @@ public class TestTransformation {
         PDINLPServerIntegrationMeta meta = this.getTestMeta();
         meta.setNerTask("TextTilingTokenizer");
         TransMeta transMeta = TransTestFactory.generateTestTransformation(null, meta, "testStep");
-        List<RowMetaAndData> input = getInputData();
+        List<RowMetaAndData> input = getTopicInputData();
         List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
                 TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
+        assert(result.size() >= 1);
     }
 
     @Test
-    public void testShouldProcessRows(){
+    public void testShouldNotFailIfTopicsAreTooShort() throws KettleException {
+        PDINLPServerIntegrationMeta meta = this.getTestMeta();
+        meta.setNerTask("TextTilingTokenizer");
+        TransMeta transMeta = TransTestFactory.generateTestTransformation(null, meta, "testStep");
+        List<RowMetaAndData> input = getNERInputData();
+        List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
+                TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
+        assert(result.size() == 2);
+    }
 
+    @Test
+    public void testShouldSentTokenizeManyRows() throws KettleException {
+        PDINLPServerIntegrationMeta meta= this.getTestMeta();
+        meta.setNerTask("SentenceTokenizer");
+        meta.setBatchSize(100L);
+        TransMeta transMeta = TransTestFactory.generateTestTransformation(null, meta, "testStep");
+         List<RowMetaAndData> input = getMultiSentInputData();
+         List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
+                 TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
+         assert(result.size() >= 15000);
+    }
+
+    @Test
+    public void testShouldNERManyRows() throws KettleException {
+        PDINLPServerIntegrationMeta meta= this.getTestMeta();
+        meta.setNerTask("NERTask");
+        meta.setBatchSize(100L);
+        meta.setEntities("PERSON");
+        TransMeta transMeta = TransTestFactory.generateTestTransformation(null, meta, "testStep");
+        List<RowMetaAndData> input = getMultiNERInputData();
+        List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
+                TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
+        assert(result.size() >= 15000);
     }
 }

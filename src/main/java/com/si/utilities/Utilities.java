@@ -220,6 +220,7 @@ public class Utilities {
         if(idx < inRow.length){
             inRow[idx] = output;
         }
+        inRows.add(inRow);
         return inRows;
     }
 
@@ -256,14 +257,20 @@ public class Utilities {
         RowSet outRows = inRowSet;
         if(jarrObj != null) {
             JSONArray jarr = (JSONArray) jarrObj;
-            for(Object[] row: inrows) {
-                if(task.equals("nertask")) {
-                    for(int i = 0; i < jarr.size(); i++) {
+            if(jarr.size() > 0) {
+                for (int i = 0; i < jarr.size(); i++) {
+                    Object[] row = inrows[i];
+                    if (task.equals("nertask")) {
                         JSONObject jobj = (JSONObject) jarr.get(i);
                         outRows = this.getNamedEntityResults(inRowSet, jobj, row);
+                    } else if (task.equals("sentencetokenizer") || task.equals("texttilingtokenizer")) {
+                        JSONArray jobj = (JSONArray) jarr.get(i);
+                        outRows = this.getTextRows(inRowSet, jobj, row);
                     }
-                }else if(task.equals("sentencetokenizer") || task.equals("texttilingtokenizer")){
-                    outRows = this.getTextRows(inRowSet, jarr, row);
+                }
+            }else{
+                for(Object[] row: inrows){
+                    outRows.add(row);
                 }
             }
         }else{
@@ -287,7 +294,7 @@ public class Utilities {
         RowSet outRows = new RowSet();
         result.parsePayloadJson();
         if(result.isSuccess()) {
-            JSONObject jobj= (JSONObject) result.getPayload();
+            JSONObject jobj= (JSONObject) result.getResult();
             if (jobj != null && ((Boolean) jobj.get("err")) == false) {
                 String task = this.meta.getNerTask().toLowerCase().trim();
                 if(task != null) {
@@ -297,7 +304,7 @@ public class Utilities {
                     }else if(task.equals("sentencetokenizer")){
                         jarrObj = jobj.get("sentences");
                     }else if(task.equals("texttilingtokenizer")){
-                        jarrObj = jobj.get("topics");
+                        jarrObj = jobj.get("segments");
                     }
                     if(jarrObj != null){
                         outRows = this.processResultRows(jarrObj, task, inrows, outRows);
@@ -308,7 +315,7 @@ public class Utilities {
                     throw new IllegalArgumentException("NER Task Not Specified");
                 }
             } else {
-                throw new AssertionError("Result from Celery Must be Same Length as Sent Batch");
+                throw new AssertionError("Result from Celery Returned Err");
             }
         }
         return outRows;

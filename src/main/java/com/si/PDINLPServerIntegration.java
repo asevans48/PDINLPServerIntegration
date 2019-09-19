@@ -84,6 +84,7 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
       RowMetaInterface inMeta = getInputRowMeta().clone();
       this.data.outputRowMeta = inMeta.clone();
       this.meta.getFields(this.data.outputRowMeta, getStepname(), null, null, this, null, null);
+      this.utilities.setCelery();
       first = false;
     }
 
@@ -96,7 +97,34 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
     for(Object[] row: rows) {
       putRow(getInputRowMeta(), row);
     }
-   }
+  }
+
+  public void doProcessRows() throws KettleStepException {
+     if(this.batch.size() > 0) {
+       Object[][] obatch = new Object[this.batch.size()][];
+       for (int i = 0; i < this.batch.size(); i++) {
+         Object[] or = this.batch.get(i);
+         obatch[i] = or;
+       }
+       RowSet rowSet = null;
+       try {
+         rowSet = this.utilities.getResults(obatch);
+       } catch (CloneNotSupportedException e) {
+         e.printStackTrace();
+       } catch (InterruptedException e) {
+         e.printStackTrace();
+       } catch (ExecutionException e) {
+         e.printStackTrace();
+       } catch (TimeoutException e) {
+         e.printStackTrace();
+       } catch (ParseException e) {
+         e.printStackTrace();
+       }
+       this.pushRows(rowSet);
+       this.batch = new ArrayList<Object[]>();
+       this.currBatch = 0;
+     }
+  }
 
   /**
    * Process a row
@@ -111,10 +139,14 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
         // no more input to be expected
         if(this.data.getCelery() != null) {
           try{
-            this.data.getCelery().close();
-          }finally{
-            setOutputDone();
-            return false;
+            this.doProcessRows();
+          }finally {
+            try {
+              this.data.getCelery().close();
+            } finally {
+              setOutputDone();
+              return false;
+            }
           }
         }else {
           setOutputDone();
@@ -140,27 +172,7 @@ public class PDINLPServerIntegration extends BaseStep implements StepInterface {
         this.currBatch += 1;
       }
       if((this.currBatch == this.meta.getBatchSize().intValue() || nrow == null) && this.batch.size() > 0){
-        Object[][] obatch = new Object[this.batch.size()][];
-        for(int i = 0; i < this.batch.size(); i++){
-          Object[] or = this.batch.get(i);
-          obatch[i] = or;
-        }
-        RowSet rowSet = null;
-        try {
-          rowSet = this.utilities.getResults(obatch);
-        } catch (CloneNotSupportedException e) {
-          e.printStackTrace();
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        } catch (ExecutionException e) {
-          e.printStackTrace();
-        } catch (TimeoutException e) {
-          e.printStackTrace();
-        } catch (ParseException e) {
-          e.printStackTrace();
-        }
-        this.pushRows(rowSet);
-        this.batch = new ArrayList<Object[]>();
+        this.doProcessRows();
       }
 
       if ( checkFeedback( getLinesRead() ) ) {
