@@ -73,7 +73,7 @@ public class TestTransformation {
         List<RowMetaAndData> input = new ArrayList<RowMetaAndData>();
         RowMeta rm = new RowMeta();
         rm.addValueMeta( new ValueMetaString( fieldName ) );
-        input.add( new RowMetaAndData( rm, new Object[]{ "Jackson Pollock was a famous artist." } ) );
+        input.add( new RowMetaAndData( rm, new Object[]{ "Our nationally recognized model of Acute Care for Elders (ACE) units offer enhanced care for older adults in specially designed hospital units. Geriatricians, advanced practice nurses, social workers, pharmacists, and physical and occupational therapists work together to deliver cost-effective, compassionate, patient-centered care." } ) );
         input.add( new RowMetaAndData( rm, new Object[]{ "My name is Drew. This is another sentence." } ) );
         return input;
     }
@@ -146,7 +146,7 @@ public class TestTransformation {
         List<RowMetaAndData> input = getSentInputData();
         List<RowMetaAndData> result = TransTestFactory.executeTestTransformation( transMeta,
                 TransTestFactory.INJECTOR_STEPNAME, "testStep", TransTestFactory.DUMMY_STEPNAME, input );
-        assert(result.size() == 3);
+        assert(result.size() == 4);
     }
 
     @Test

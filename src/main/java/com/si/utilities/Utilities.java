@@ -227,7 +227,7 @@ public class Utilities {
         }else{
             throw new IndexOutOfBoundsException("Index of Output Row Does not Exist");
         }
-        inRows.add(inRow);
+        inRows.add(inRow.clone());
         return inRows;
     }
 
